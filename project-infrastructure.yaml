@@ -1,0 +1,90 @@
+    # Usage:
+    #   aws cloudformation --region <region> create-stack --stack-name <stack name> --template-body file://vpc-fargate.yaml
+    
+    # This template will:
+    #   Create a VPC with:
+    #       2 Public Subnets
+    #       2 Private Subnets
+    #   An Internet Gateway (with routes to it for Public Subnets)
+    #   A NAT Gateway for outbound access (with routes from Private Subnets set to use it)
+    #     
+    Resources:
+      WebAppVPC:
+        Type: 'AWS::EC2::VPC'
+        Properties:
+          CidrBlock: 10.0.0.0/16
+          
+     
+      WebAppSubnet1:
+        Type: 'AWS::EC2::Subnet'
+        Properties:
+          VpcId: !Ref WebAppVPC
+          AvailabilityZone: ap-south-1a
+          CidrBlock: 10.0.1.0/24
+          MapPublicIpOnLaunch: true
+     
+      WebAppSubnet2:
+        Type: 'AWS::EC2::Subnet'
+        Properties:
+          VpcId: !Ref WebAppVPC
+          AvailabilityZone: ap-south-1b
+          CidrBlock: 10.0.2.0/24
+          MapPublicIpOnLaunch: true
+     
+      WebAppSubnet3:
+        Type: 'AWS::EC2::Subnet'
+        Properties:
+          VpcId: !Ref WebAppVPC
+          AvailabilityZone: ap-south-1c
+          CidrBlock: 10.0.3.0/24
+          MapPublicIpOnLaunch: true
+      
+      WebAppInternetGateway:
+        Type: 'AWS::EC2::InternetGateway'
+        Properties:
+          Tags:
+            - Key: Name
+              Value: !Join [_, [!Ref 'AWS::StackName']]
+            - Key: Network
+              Value: Public
+      
+      GatewayToInternet:
+        Type: 'AWS::EC2::VPCGatewayAttachment'
+        Properties:
+          VpcId: !Ref WebAppVPC
+          InternetGatewayId: !Ref WebAppInternetGateway
+      
+      PublicRouteTable:
+        Type: 'AWS::EC2::RouteTable'
+        Properties:
+          VpcId: !Ref WebAppVPC
+          Tags:
+            - Key: Network
+              Value: Public
+      
+      PublicRoute:
+        Type: 'AWS::EC2::Route'
+        DependsOn: GatewayToInternet
+        Properties:
+          RouteTableId: !Ref PublicRouteTable
+          DestinationCidrBlock: 0.0.0.0/0
+          GatewayId: !Ref WebAppInternetGateway
+     
+      PublicSubnet1RouteTableAssociation:
+        Type: 'AWS::EC2::SubnetRouteTableAssociation'
+        Properties:
+          SubnetId: !Ref WebAppSubnet1
+          RouteTableId: !Ref PublicRouteTable
+     
+      PublicSubnet2RouteTableAssociation:
+        Type: 'AWS::EC2::SubnetRouteTableAssociation'
+        Properties:
+          SubnetId: !Ref WebAppSubnet2
+          RouteTableId: !Ref PublicRouteTable
+      
+      PublicSubnet3RouteTableAssociation:
+        Type: 'AWS::EC2::SubnetRouteTableAssociation'
+        Properties:
+          SubnetId: !Ref WebAppSubnet3
+          RouteTableId: !Ref PublicRouteTable
+      
