@@ -1,25 +1,27 @@
     # Usage:
-    #   aws cloudformation --region <region> create-stack --stack-name <stack name> --template-body file://vpc-fargate.yaml
+    #   aws cloudformation --region <region> create-stack --stack-name <stack name> --template-body file://project-infrastructure.yaml
     
     # This template will:
     #   Create a VPC with:
-    #       2 Public Subnets
-    #       2 Private Subnets
+    #       3 Public Subnets in each AZs
     #   An Internet Gateway (with routes to it for Public Subnets)
-    #   A NAT Gateway for outbound access (with routes from Private Subnets set to use it)
-    #     
+    #   Route table    
+    # 
     Resources:
       WebAppVPC:
         Type: 'AWS::EC2::VPC'
         Properties:
           CidrBlock: 10.0.0.0/16
+          Tags:
+            - Key: Name
+              Value: webAppVPC
           
      
       WebAppSubnet1:
         Type: 'AWS::EC2::Subnet'
         Properties:
           VpcId: !Ref WebAppVPC
-          AvailabilityZone: ap-south-1a
+          AvailabilityZone: !Select [ 0, !GetAZs '' ]
           CidrBlock: 10.0.1.0/24
           MapPublicIpOnLaunch: true
      
@@ -27,7 +29,7 @@
         Type: 'AWS::EC2::Subnet'
         Properties:
           VpcId: !Ref WebAppVPC
-          AvailabilityZone: ap-south-1b
+          AvailabilityZone: !Select [ 1, !GetAZs '' ]
           CidrBlock: 10.0.2.0/24
           MapPublicIpOnLaunch: true
      
@@ -35,7 +37,7 @@
         Type: 'AWS::EC2::Subnet'
         Properties:
           VpcId: !Ref WebAppVPC
-          AvailabilityZone: ap-south-1c
+          AvailabilityZone: !Select [ 2, !GetAZs '' ]
           CidrBlock: 10.0.3.0/24
           MapPublicIpOnLaunch: true
       
