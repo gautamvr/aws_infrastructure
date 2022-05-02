@@ -6,7 +6,7 @@
     #       3 Public Subnets in each AZs
     #   An Internet Gateway (with routes to it for Public Subnets)
     #   Route table    
-    # 
+    
     Resources:
       WebAppVPC:
         Type: 'AWS::EC2::VPC'
@@ -15,7 +15,6 @@
           Tags:
             - Key: Name
               Value: webAppVPC
-          
      
       WebAppSubnet1:
         Type: 'AWS::EC2::Subnet'
@@ -89,4 +88,32 @@
         Properties:
           SubnetId: !Ref WebAppSubnet3
           RouteTableId: !Ref PublicRouteTable
+
+      WebAppInstance:
+        Type: AWS::EC2::Instance
+        Properties:
+          ImageId: ami-0c9b0982edfbd29c2
+          InstanceType: t2.micro
+          BlockDeviceMappings:
+            -
+              DeviceName: "/dev/xvda"
+              Ebs:
+                VolumeSize: 20
+                VolumeType: gp2
+          SecurityGroupIds: [{ "Fn::GetAtt" : ["InstanceSecurityGroup", "GroupId"] }]
+          SubnetId: !Ref WebAppSubnet1
+      
+      InstanceSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: Web application group security
+          VpcId: !Ref WebAppVPC
+          SecurityGroupIngress:
+            - IpProtocol: tcp
+              FromPort: 8080
+              ToPort: 8080
+              CidrIp: 0.0.0.0/0
+
+
+
       
