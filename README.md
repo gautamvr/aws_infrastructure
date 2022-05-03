@@ -9,5 +9,7 @@ AWS Cloud formation templates used for the Web application project
 - Create a VPC with:
     - 3 Public Subnets in each AZs
 - An Internet Gateway (with routes to it for Public Subnets)
-- Route table    
+- Route table
+- EC2 instance with custom AMI
+- Security Group
      
