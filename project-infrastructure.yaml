@@ -38,6 +38,42 @@ Parameters:
     Description: IP range (CIDR notation) for the private subnet in the third Availability Zone
     Type: String
     Default: 10.0.6.0/24
+  RootVolumeType:
+    Description: EBS volume type
+    Type: String
+    Default: gp2
+  RootVolumeSize:
+    Description: EBS volume size
+    Type: Number
+    Default: 20
+  instanceType:
+    Description: EC2 Instance type
+    Type: String
+    Default: t2.micro
+  imageId: 
+    Description: EC2 Instance ID
+    Type: String
+    Default: ami-033b95fb8079dc481
+  S3BucketName:
+    Description: S3 Bucket Name
+    Type: String
+    Default: webapp-s3bucket-gautam
+  DBName:
+    Description: DB Instance Name
+    Type: String
+    Default: csye6225 
+  DBUserName:
+    Description: DB Instance UserName
+    Type: String
+    Default: webappmaindb
+  DBPassword:
+    Description: DB Instance Password
+    Type: String
+    Default: password
+  envName:
+    Description: Environment Name
+    Type: String
+    Default: dev
   
 
 Resources:
@@ -235,3 +271,85 @@ Resources:
         IpProtocol: tcp
         FromPort: 3306
         ToPort: 3306
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join ['', [!Ref AWS::StackName,'.',!Ref S3BucketName,'.',!Ref envName,'.gautam.me' ]]
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+      LifecycleConfiguration:
+        Rules:
+          - Id: LifeCycleRule
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: STANDARD_IA
+            ExpirationInDays: 60
+
+  RDSParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties: 
+      Description: RDS parameter Group
+      Family: mysql8.0
+      Parameters: 
+        sql_mode: IGNORE_SPACE
+        max_allowed_packet: 1024
+      Tags: 
+        - Key: RDS-ParameterGroup
+          Value: MYSQLDB-ParameterGroup
+
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    DependsOn:
+      - InternetGatewayAttachment
+      - myVPC
+      - myRDSSecretKey
+    Properties:
+      Engine: MySQL
+      AllocatedStorage: 5
+      DBInstanceClass: db.t3.micro
+      MultiAZ: false
+      DBInstanceIdentifier: !Ref DBName
+      MasterUsername: !Ref DBUserName
+      MasterUserPassword: !Ref DBPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: false
+      DBName: !Ref DBName
+      DBParameterGroupName: !Ref RDSParameterGroup
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      KmsKeyId: !Ref myRDSSecretKey
+      StorageEncrypted: true
+
+  WebAppS3IAMPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CodeDeployEC2S3
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+            - 's3:PutObject'
+            - 's3:GetObject'
+            - 's3:DeleteObject'
+            Resource: 
+            - !Join ['', [!GetAtt 'S3Bucket.Arn','/*' ]]
+            - !Join ['', ['arn:aws:s3:::',!Ref CodeDeployBucket,'/*']]
+          - Effect: Allow
+            Action:
+            - 's3:CreateBucket'
+            - 's3:DeleteBucket'
+            Resource: 
+            - !GetAtt S3Bucket.Arn
+            # - !Join ['', ['arn:aws:s3:::',!Ref CodeDeployBucket]]
+      Roles:
+      - !Ref CodeDeployEC2ServiceRole
