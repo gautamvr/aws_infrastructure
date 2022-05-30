@@ -198,3 +198,40 @@ Resources:
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnet3
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet Group for RDS instances
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+  
+  ApplicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: applicationSecurityGroup
+      GroupDescription: EC2 Security Group
+      VpcId: !Ref myVPC
+      SecurityGroupIngress:
+      - SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+        IpProtocol: tcp
+        FromPort: 5001
+        ToPort: 5001
+      - SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+        IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: databaseSecurityGroup
+      GroupDescription: DB Security Group
+      VpcId: !Ref myVPC
+      SecurityGroupIngress:
+      - SourceSecurityGroupId: !Ref ApplicationSecurityGroup
+        IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
